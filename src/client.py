@@ -4,9 +4,68 @@ main client module
 
 import socket
 import select
+from sys import argv
+from PyQt6 import QtCore, QtWidgets, QtGui
 from log import log_ok, log_err
 
-def connect_to_server(host: str, port: int):
+
+class Client(QtWidgets.QWidget):
+	def __init__(self):
+		super().__init__()
+		# ask user for server ip
+		self.host, self.port = input("ip:port please: ").split(":")
+		self.messages = []
+		self.port = int(self.port)
+		self.client = connect_to_server(self.host, self.port)
+		if not self.client:
+			exit()
+		self.init_ui()
+
+	def init_ui(self):
+		"""
+		initializes client ui
+		"""
+		self.setFixedSize(800, 600)
+
+		font = QtGui.QFont()
+		font.setFamily("Source Code Pro")
+		self.setFont(font)
+
+		self.connected_to_label = QtWidgets.QLabel(parent=self)
+		self.connected_to_label.setGeometry(QtCore.QRect(20, 0, 700, 71))
+		font.setPointSize(30)
+		self.connected_to_label.setFont(font)
+		self.connected_to_label.setText(f"Connected to: {self.host}:{self.port}")
+
+		self.chat_list = QtWidgets.QListWidget(parent=self)
+		self.chat_list.setGeometry(QtCore.QRect(20, 70, 761, 471))
+
+		self.msg_input = QtWidgets.QLineEdit(parent=self)
+		self.msg_input.setGeometry(QtCore.QRect(20, 550, 611, 32))
+		font.setPointSize(14)
+		self.msg_input.setFont(font)
+		self.msg_input.setMaxLength(256)
+
+		self.send_button = QtWidgets.QPushButton(parent=self)
+		self.send_button.setGeometry(QtCore.QRect(640, 550, 141, 34))
+		font.setPointSize(16)
+		self.send_button.setFont(font)
+		self.send_button.setText("SEND")
+		self.send_button.clicked.connect(self.on_clicked)
+
+	def on_clicked(self):
+		"""
+		when button is clicked
+		"""
+		if self.msg_input.text() == "":
+			return
+
+		msg = self.msg_input.text()
+		self.msg_input.clear()
+		self.chat_list.addItem(f"me: {msg}")
+		self.client.send(msg.encode(encoding="utf-8"))
+
+def connect_to_server(host: str, port: int) -> socket.socket:
 	"""
 	connects non-blocking client socket to server
 	params:
@@ -33,20 +92,8 @@ def connect_to_server(host: str, port: int):
 		log_err(f"unable to connect to {host}:{port}")
 		return None
 
-try:
-	sock = connect_to_server("127.0.0.1", 80)
-except ConnectionRefusedError as e:
-	print("unable to connect to 127.0.0.1:80")
-	exit()
-while True and sock:
-	try:
-		msg = input()
-		if msg == "/ex":
-			sock.close()
-			break
-		sock.sendall(bytes(msg, "utf-8"))
-	except socket.error:
-		sock.close()
-		break
-if sock is not None:
-	sock.close()
+if __name__ == "__main__":
+	app = QtWidgets.QApplication(argv)
+	w = Client()
+	w.show()
+	exit(app.exec())
