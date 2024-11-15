@@ -19,7 +19,8 @@ def connect_to_server(host: str, port: int):
 	try:
 		client.connect((host, port))
 	except TimeoutError:
-		pass
+		print(f"unable to connect to {host}:{port}")
+		return None
 
 	_, ready_to_write, _ = select.select([], [client], [])
 
@@ -27,10 +28,16 @@ def connect_to_server(host: str, port: int):
 		log_ok(f"successfully connected to {host}:{port}")
 		return client
 	else:
+		# should never happen as we handled not connecting to the server
+		# and select() hangs until we get a good socket
 		log_err(f"unable to connect to {host}:{port}")
 		return None
 
-sock = connect_to_server("127.0.0.1", 80)
+try:
+	sock = connect_to_server("127.0.0.1", 80)
+except ConnectionRefusedError as e:
+	print("unable to connect to 127.0.0.1:80")
+	exit()
 while True and sock:
 	try:
 		msg = input()
@@ -38,7 +45,8 @@ while True and sock:
 			sock.close()
 			break
 		sock.sendall(bytes(msg, "utf-8"))
-	except:
+	except socket.error:
 		sock.close()
 		break
-sock.close()
+if sock is not None:
+	sock.close()

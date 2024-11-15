@@ -54,7 +54,7 @@ class Server:
 			t.join()
 		log_info("closed server")
 
-	def handle_client(self, cl: socket.socket, cl_addr):
+	def handle_client(self, cl: socket.socket, cl_addr) -> None:
 		""".
 		handles client connection and messages
 		params:
@@ -65,21 +65,44 @@ class Server:
 		while not self.shutdown_event.is_set():
 			try:
 				msg = cl.recv(1024)
+				decoded = msg.decode("utf-8")
 				if msg:
-					log_info(f"{cl_addr}: {msg.decode("utf-8")}")
+					log_info(f"{cl_addr}: {decoded}")
+					self.broadcast(msg, cl)
 				else:
 					break
 			except BlockingIOError:
 				# we didn't get any data
 				pass
-			except Exception as e:
-				log_err(f"error {e} while handling client {cl_addr}")
+			except ConnectionError:
+				# client exited while the server was recv()ing, which resulted in an error
+				# might come up later so i'll keep this here
+				# log_err(f"connection refused by peer error from client {cl_addr}")
+				break
+			except UnicodeDecodeError:
+				# got bad bytes from client
+				log_err(f"got bad message from client {cl_addr}")
 				break
 
 		with self.clients_lock:
 			self.clients.remove((cl, cl_addr))
 		log_info(f"closing connection with client {cl_addr}")
 		cl.close()
+
+	def broadcast(self, msg: bytes, sender) -> None:
+		"""
+		broadcasts received message to all connected clients
+		params:
+			msg - message bytes
+			sender - client who sent it
+		"""
+		with self.clients_lock:
+			for client in self.clients:
+				# don't return the message to sender
+				if client == sender:
+					continue
+
+				client[0].send(msg)
 
 if __name__ == "__main__":
 	server = Server("127.0.0.1", 80)
