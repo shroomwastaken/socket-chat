@@ -32,7 +32,7 @@ class Client(QtWidgets.QWidget):
 		self.setFont(font)
 
 		self.connected_to_label = QtWidgets.QLabel(parent=self)
-		self.connected_to_label.setGeometry(QtCore.QRect(20, 0, 700, 71))
+		self.connected_to_label.setGeometry(QtCore.QRect(20, 0, 650, 71))
 		font.setPointSize(30)
 		self.connected_to_label.setFont(font)
 		self.connected_to_label.setText(f"Connected to: {self.host}:{self.port}")
@@ -53,17 +53,28 @@ class Client(QtWidgets.QWidget):
 		self.send_button.setText("SEND")
 		self.send_button.clicked.connect(self.on_clicked)
 
+		self.exit_button = QtWidgets.QPushButton(parent=self)
+		self.exit_button.setGeometry(QtCore.QRect(650, 0, 131, 71))
+		self.exit_button.setFont(font)
+		self.exit_button.setText("QUIT")
+		self.exit_button.clicked.connect(self.on_clicked)
+
 	def on_clicked(self):
 		"""
 		when button is clicked
 		"""
-		if self.msg_input.text() == "":
-			return
+		match self.sender():
+			case self.send_button:
+				if self.msg_input.text() == "":
+					return
 
-		msg = self.msg_input.text()
-		self.msg_input.clear()
-		self.chat_list.addItem(f"me: {msg}")
-		self.client.send(msg.encode(encoding="utf-8"))
+				msg = self.msg_input.text()
+				self.msg_input.clear()
+				self.chat_list.addItem(f"me: {msg}")
+				self.client.send(msg.encode(encoding="utf-8"))
+			case self.exit_button:
+				self.client.close()
+				QtWidgets.QApplication.instance().quit()
 
 def connect_to_server(host: str, port: int) -> socket.socket:
 	"""
