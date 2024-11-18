@@ -15,6 +15,8 @@ class Server(QtWidgets.QWidget):
 	"""
 	def __init__(self, host: str, port: int):
 		super().__init__()
+
+		# server setup
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.bind((host, port))
 		self.sock.listen(10)
@@ -24,8 +26,8 @@ class Server(QtWidgets.QWidget):
 		self.messages = []
 		self.clients = []
 		self.threads = []
-		self.clients_lock = threading.Lock()
-		self.shutdown_event = threading.Event()
+		self.clients_lock = threading.Lock()  # for thread-safe access to the clients list
+		self.shutdown_event = threading.Event()  # to know when we're shutting everything down
 
 		self.init_ui()
 
@@ -40,8 +42,10 @@ class Server(QtWidgets.QWidget):
 				log_ok(f"accepted connection from {cl_addr}")
 				new_thread = threading.Thread(target=self.handle_client, args=(cl_sock, cl_addr))
 				new_thread.start()
+				self.clients_list.addItem(f"{cl_addr}")
 				self.clients.append((cl_sock, cl_addr))
 				self.threads.append(new_thread)
+				self.clients_count.setText(str(len(self.clients)))
 			except BlockingIOError:
 				# because we have a non-blocking socket every time we don't get a connection through accept()
 				# it throws an error which we can just ignore here
@@ -72,7 +76,7 @@ class Server(QtWidgets.QWidget):
 				if msg:
 					self.messages.append((cl_addr, decoded))
 					self.chat_list.addItem(f"{cl_addr} : {decoded}")
-					self.broadcast(msg, cl)
+					self.broadcast(msg, cl, cl_addr)
 				else:
 					break
 			except BlockingIOError:
@@ -89,24 +93,27 @@ class Server(QtWidgets.QWidget):
 				break
 
 		with self.clients_lock:
+			self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
 			self.clients.remove((cl, cl_addr))
+			self.clients_count.setText(str(len(self.clients)))
 		log_info(f"closing connection with client {cl_addr}")
 		cl.close()
 
-	def broadcast(self, msg: bytes, sender) -> None:
+	def broadcast(self, msg: bytes, sender: socket.socket, sender_addr) -> None:
 		"""
 		broadcasts received message to all connected clients
 		params:
 			msg - message bytes
 			sender - client who sent it
+			sender_addr - client address
 		"""
 		with self.clients_lock:
 			for client in self.clients:
 				# don't return the message to sender
-				if client == sender:
+				if client == (sender, sender_addr):
 					continue
 
-				client[0].send(msg)
+				client[0].send(bytes(f"{sender_addr}", encoding="utf-8") + b'\x01' + msg)
 
 	def init_ui(self):
 		"""
@@ -126,7 +133,8 @@ class Server(QtWidgets.QWidget):
 		self.uptime_clock.setGeometry(QtCore.QRect(600, 60, 181, 31))
 		font.setPointSize(24)
 		self.uptime_clock.setFont(font)
-		self.uptime_clock.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignTrailing|QtCore.Qt.AlignmentFlag.AlignVCenter)
+		self.uptime_clock.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignTrailing \
+			| QtCore.Qt.AlignmentFlag.AlignVCenter)
 		self.uptime_clock.setText("00:00:00")
 
 		self.clients_label = QtWidgets.QLabel(parent=self)
@@ -140,7 +148,8 @@ class Server(QtWidgets.QWidget):
 		self.clients_count.setGeometry(QtCore.QRect(600, 140, 181, 31))
 		font.setPointSize(24)
 		self.clients_count.setFont(font)
-		self.clients_count.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignTrailing|QtCore.Qt.AlignmentFlag.AlignVCenter)
+		self.clients_count.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight| QtCore.Qt.AlignmentFlag.AlignTrailing \
+			| QtCore.Qt.AlignmentFlag.AlignVCenter)
 		self.clients_count.setText("0")
 
 		self.close_button = QtWidgets.QPushButton(parent=self)
@@ -161,8 +170,10 @@ class Server(QtWidgets.QWidget):
 		self.chat_label.setFont(font)
 		self.chat_label.setText("Chat")
 
-		self.clients_list = QtWidgets.QListView(parent=self)
+		self.clients_list = QtWidgets.QListWidget(parent=self)
 		self.clients_list.setGeometry(QtCore.QRect(450, 240, 341, 351))
+		font.setPointSize(15)
+		self.clients_list.setFont(font)
 
 		self.clients_list_label = QtWidgets.QLabel(parent=self)
 		self.clients_list_label.setGeometry(QtCore.QRect(450, 190, 341, 41))
@@ -182,6 +193,7 @@ class Server(QtWidgets.QWidget):
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)
 	server = Server("127.0.0.1", 80)
+	# the server and the gui run on different threads
 	server_thread = threading.Thread(target=server.run, args=())
 	server_thread.start()
 	server.show()

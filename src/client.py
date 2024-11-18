@@ -4,19 +4,26 @@ main client module
 
 import socket
 import select
+import threading
 from sys import argv
 from PyQt6 import QtCore, QtWidgets, QtGui
 from log import log_ok, log_err
 
 
 class Client(QtWidgets.QWidget):
+	"""
+	main client class
+	"""
 	def __init__(self):
 		super().__init__()
-		# ask user for server ip
 		self.host, self.port = input("ip:port please: ").split(":")
 		self.messages = []
 		self.port = int(self.port)
 		self.client = connect_to_server(self.host, self.port)
+		self.shutdown_event = threading.Event()
+		self.broadcast_thread = threading.Thread(target=self.handle_broadcast)
+		self.broadcast_thread.start()
+		# if we couldn't connect to server
 		if not self.client:
 			exit()
 		self.init_ui()
@@ -61,7 +68,7 @@ class Client(QtWidgets.QWidget):
 
 	def on_clicked(self):
 		"""
-		when button is clicked
+		when buttons are clicked
 		"""
 		match self.sender():
 			case self.send_button:
@@ -73,8 +80,32 @@ class Client(QtWidgets.QWidget):
 				self.chat_list.addItem(f"me: {msg}")
 				self.client.send(msg.encode(encoding="utf-8"))
 			case self.exit_button:
+				self.shutdown_event.set()
+				self.broadcast_thread.join()
 				self.client.close()
 				QtWidgets.QApplication.instance().quit()
+
+	def handle_broadcast(self):
+		"""
+		handles server sending back messages from other users
+		"""
+		while not self.shutdown_event.is_set():
+			try:
+				msg = self.client.recv(1024).split(b'\x01')
+				cl_addr = str(msg[0])[2:-1]
+				decoded = msg[1].decode("utf-8")
+				if msg:
+					self.messages.append((cl_addr, decoded))
+					self.chat_list.addItem(f"{cl_addr} : {decoded}")
+				else:
+					break
+			except TimeoutError:
+				# we didn't get any data
+				pass
+			except UnicodeDecodeError:
+				# got bad bytes from server
+				log_err("got bad message from server")
+				break
 
 def connect_to_server(host: str, port: int) -> socket.socket:
 	"""
@@ -84,7 +115,7 @@ def connect_to_server(host: str, port: int) -> socket.socket:
 		port - server port
 	"""
 	client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	client.settimeout(2)
+	client.settimeout(0.5)
 
 	try:
 		client.connect((host, port))
@@ -92,6 +123,7 @@ def connect_to_server(host: str, port: int) -> socket.socket:
 		print(f"unable to connect to {host}:{port}")
 		return None
 
+	# wait until we're ready to send to server
 	_, ready_to_write, _ = select.select([], [client], [])
 
 	if ready_to_write:
