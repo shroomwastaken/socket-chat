@@ -8,6 +8,7 @@ import threading
 from sys import argv
 from PyQt6 import QtCore, QtWidgets, QtGui
 from log import log_ok, log_err
+from client_popup import ClientPopup
 
 
 class Client(QtWidgets.QWidget):
@@ -16,11 +17,9 @@ class Client(QtWidgets.QWidget):
 	"""
 	def __init__(self):
 		super().__init__()
-		self.host, self.port = input("ip:port please: ").split(":")
-		self.nickname = input("nickname (<= 16 characters) (default=anonymous): ")
-		if len(self.nickname) > 16:
-			print("bad nickname")
-			exit()
+		self.ipandport, self.nickname = ClientPopup().exec()
+		self.host = self.ipandport.split(":")[0]
+		self.port = int(self.ipandport.split(":")[1])
 		self.messages = []
 		self.port = int(self.port)
 		self.client = connect_to_server(self.host, self.port)
@@ -83,7 +82,7 @@ class Client(QtWidgets.QWidget):
 
 				msg = self.msg_input.text()
 				self.msg_input.clear()
-				self.chat_list.addItem(f"me: {msg}")
+				self.chat_list.addItem(f"{self.nickname}: {msg}")
 				self.client.send(msg.encode(encoding="utf-8"))
 			case self.exit_button:
 				self.shutdown_event.set()
