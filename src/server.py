@@ -4,6 +4,7 @@ main server module
 
 import socket
 import threading
+from time import sleep
 from sys import argv
 from PyQt6 import QtCore, QtWidgets, QtGui
 from log import log_ok, log_err, log_info
@@ -28,6 +29,11 @@ class Server(QtWidgets.QWidget):
 		self.threads = []
 		self.clients_lock = threading.Lock()  # for thread-safe access to the clients list
 		self.shutdown_event = threading.Event()  # to know when we're shutting everything down
+
+		# controlling the uptime timer
+		self.time_thread = threading.Thread(target=self.update_timer)
+		self.time_thread.start()
+		self.seconds_elapsed = 0
 
 		self.init_ui()
 
@@ -59,6 +65,7 @@ class Server(QtWidgets.QWidget):
 		self.sock.close()
 		for t in self.threads:
 			t.join()
+		self.time_thread.join()
 		log_info("closed server")
 
 	def handle_client(self, cl: socket.socket, cl_addr) -> None:
@@ -189,6 +196,18 @@ class Server(QtWidgets.QWidget):
 		if self.sender() == self.close_button:
 			self.shutdown_event.set()
 			QtWidgets.QApplication.instance().quit()
+
+	def update_timer(self):
+		"""
+		updates the server uptime timer every second
+		"""
+		while not self.shutdown_event.is_set():
+			sleep(1)
+			self.seconds_elapsed += 1
+			seconds = self.seconds_elapsed % 60
+			minutes = (self.seconds_elapsed // 60) % 60
+			hours = self.seconds_elapsed // (60 * 24)
+			self.uptime_clock.setText(f"{hours:02}:{minutes:02}:{seconds:02}")
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)
