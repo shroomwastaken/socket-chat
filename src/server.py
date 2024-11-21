@@ -47,10 +47,10 @@ class Server(QtWidgets.QWidget):
 				(cl_sock, cl_addr) = self.sock.accept()
 				log_ok(f"accepted connection from {cl_addr}")
 				new_thread = threading.Thread(target=self.handle_client, args=(cl_sock, cl_addr))
-				new_thread.start()
 				self.clients_list.addItem(f"{cl_addr}")
 				self.clients.append((cl_sock, cl_addr))
 				self.threads.append(new_thread)
+				new_thread.start()
 				self.clients_count.setText(str(len(self.clients)))
 			except BlockingIOError:
 				# because we have a non-blocking socket every time we don't get a connection through accept()
@@ -76,14 +76,28 @@ class Server(QtWidgets.QWidget):
 			cl_addr - client address
 		"""
 		cl.setblocking(False)
+		nickname = "anonymous" # default for if we don't get a nickname
+		# make sure clients list has nickname
+		with self.clients_lock:
+			self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
+			self.clients_list.addItem(f"{cl_addr} : {nickname}")
 		while not self.shutdown_event.is_set():
 			try:
 				msg = cl.recv(1024)
-				decoded = msg.decode("utf-8")
 				if msg:
-					self.messages.append((cl_addr, decoded))
-					self.chat_list.addItem(f"{cl_addr} : {decoded}")
-					self.broadcast(msg, cl, cl_addr)
+					# if we received a setnickname message from a client
+					# (this is the first message every client will send)
+					if msg[0] == 2:
+						# update nickname in client list
+						nickname = msg[1:].decode("utf-8")
+						with self.clients_lock:
+							self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
+							self.clients_list.addItem(f"{cl_addr} : {nickname}")
+					else:
+						decoded = msg.decode("utf-8")
+						self.messages.append((cl_addr, decoded))
+						self.chat_list.addItem(f"{nickname} : {decoded}")
+						self.broadcast(msg, cl, cl_addr, nickname)
 				else:
 					break
 			except BlockingIOError:
@@ -106,13 +120,14 @@ class Server(QtWidgets.QWidget):
 		log_info(f"closing connection with client {cl_addr}")
 		cl.close()
 
-	def broadcast(self, msg: bytes, sender: socket.socket, sender_addr) -> None:
+	def broadcast(self, msg: bytes, sender: socket.socket, sender_addr, nickname) -> None:
 		"""
 		broadcasts received message to all connected clients
 		params:
 			msg - message bytes
 			sender - client who sent it
 			sender_addr - client address
+			nickname - client nickname
 		"""
 		with self.clients_lock:
 			for client in self.clients:
@@ -120,7 +135,7 @@ class Server(QtWidgets.QWidget):
 				if client == (sender, sender_addr):
 					continue
 
-				client[0].send(bytes(f"{sender_addr}", encoding="utf-8") + b'\x01' + msg)
+				client[0].send(bytes(nickname, encoding="utf-8") + b'\x01' + msg)
 
 	def init_ui(self):
 		"""
@@ -179,7 +194,7 @@ class Server(QtWidgets.QWidget):
 
 		self.clients_list = QtWidgets.QListWidget(parent=self)
 		self.clients_list.setGeometry(QtCore.QRect(450, 240, 341, 351))
-		font.setPointSize(15)
+		font.setPointSize(10)
 		self.clients_list.setFont(font)
 
 		self.clients_list_label = QtWidgets.QLabel(parent=self)

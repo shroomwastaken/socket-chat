@@ -17,9 +17,15 @@ class Client(QtWidgets.QWidget):
 	def __init__(self):
 		super().__init__()
 		self.host, self.port = input("ip:port please: ").split(":")
+		self.nickname = input("nickname (<= 16 characters) (default=anonymous): ")
+		if len(self.nickname) > 16:
+			print("bad nickname")
+			exit()
 		self.messages = []
 		self.port = int(self.port)
 		self.client = connect_to_server(self.host, self.port)
+		# send out nickname to server with a setnickname message
+		self.client.send(b'\x02' + bytes(self.nickname, encoding="utf-8"))
 		self.shutdown_event = threading.Event()
 		self.broadcast_thread = threading.Thread(target=self.handle_broadcast)
 		self.broadcast_thread.start()
