@@ -155,7 +155,8 @@ class Server(QtWidgets.QWidget):
 		self.uptime_clock.setGeometry(QtCore.QRect(600, 60, 181, 31))
 		font.setPointSize(24)
 		self.uptime_clock.setFont(font)
-		self.uptime_clock.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignTrailing \
+		self.uptime_clock.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | \
+			QtCore.Qt.AlignmentFlag.AlignTrailing \
 			| QtCore.Qt.AlignmentFlag.AlignVCenter)
 		self.uptime_clock.setText("00:00:00")
 
@@ -170,7 +171,8 @@ class Server(QtWidgets.QWidget):
 		self.clients_count.setGeometry(QtCore.QRect(600, 140, 181, 31))
 		font.setPointSize(24)
 		self.clients_count.setFont(font)
-		self.clients_count.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight| QtCore.Qt.AlignmentFlag.AlignTrailing \
+		self.clients_count.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight| \
+			QtCore.Qt.AlignmentFlag.AlignTrailing \
 			| QtCore.Qt.AlignmentFlag.AlignVCenter)
 		self.clients_count.setText("0")
 
