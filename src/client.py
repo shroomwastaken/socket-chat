@@ -6,9 +6,16 @@ import socket
 import select
 import threading
 from sys import argv
+import string
 from PyQt6 import QtCore, QtWidgets, QtGui
 from log import log_ok, log_err
 from client_popup import ClientPopup
+
+
+ALLOWED_CHARACTERS = string.punctuation + \
+	string.ascii_letters + \
+	"абвгдеёжзийклмнопрстуфхцчшщъыьэюя" + \
+	"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
 
 
 class Client(QtWidgets.QWidget):
@@ -67,7 +74,7 @@ class Client(QtWidgets.QWidget):
 		self.send_txt_button.setGeometry(QtCore.QRect(535, 550, 101, 34))
 		font.setPointSize(16)
 		self.send_txt_button.setFont(font)
-		self.send_txt_button.setText("SENDTXT")
+		self.send_txt_button.setText("IMPORT")
 		self.send_txt_button.clicked.connect(self.on_clicked)
 
 		self.exit_button = QtWidgets.QPushButton(parent=self)
@@ -92,6 +99,29 @@ class Client(QtWidgets.QWidget):
 			case self.send_txt_button:
 				dialog = QtWidgets.QFileDialog(parent=self)
 				dialog.setFileMode(QtWidgets.QFileDialog.FileMode.ExistingFile)
+				dialog.setNameFilter("Text (*.txt)")
+				if dialog.exec():
+					filename = dialog.selectedFiles()[0]
+					try:
+						with open(filename, "r") as f:
+							content = f.read()
+							if len(content) > 256:
+								content = content[:256]
+							if any(x not in ALLOWED_CHARACTERS for x in content):
+								raise ValueError
+						self.msg_input.setText(content)
+					except PermissionError:
+						QtWidgets.QMessageBox.critical(
+							self,
+							"Permission denied",
+							"Unable to open file because of insufficient permissions",
+							QtWidgets.QMessageBox.StandardButton.Ok)
+					except ValueError:
+						QtWidgets.QMessageBox.critical(
+							self,
+							"Bad characters",
+							"File contains disallowed characters",
+							QtWidgets.QMessageBox.StandardButton.Ok)
 			case self.exit_button:
 				self.close()
 
