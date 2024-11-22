@@ -55,12 +55,13 @@ class Server(QtWidgets.QWidget):
 			except BlockingIOError:
 				# because we have a non-blocking socket every time we don't get a connection through accept()
 				# it throws an error which we can just ignore here
-				pass
+				sleep(0.5) # manual timeout so we don't get 90% cpu usage kekw
 
 	def close(self) -> None:
 		"""
 		when we've exited from the run() function
 		"""
+		self.send_shutdown_msg()
 		self.shutdown_event.set()
 		self.sock.close()
 		for t in self.threads:
@@ -97,12 +98,13 @@ class Server(QtWidgets.QWidget):
 						decoded = msg.decode("utf-8")
 						self.messages.append((cl_addr, decoded))
 						self.chat_list.addItem(f"{nickname} : {decoded}")
+						self.chat_list.scrollToBottom()
 						self.broadcast(msg, cl, cl_addr, nickname)
 				else:
 					break
 			except BlockingIOError:
 				# we didn't get any data
-				pass
+				sleep(0.5) # manual timeout so we don't get 90% cpu usage kekw
 			except ConnectionError:
 				# client exited while the server was recv()ing, which resulted in an error
 				# might come up later so i'll keep this here
@@ -136,6 +138,15 @@ class Server(QtWidgets.QWidget):
 					continue
 
 				client[0].send(bytes(nickname, encoding="utf-8") + b'\x01' + msg)
+
+	def send_shutdown_msg(self):
+		"""
+		we are shutting down and telling everyone about it
+		"""
+		with self.clients_lock:
+			for client in self.clients:
+				# 0x03 is the special shutdown message (patent pending)
+				client[0].send(b'\x03')
 
 	def init_ui(self):
 		"""
@@ -228,7 +239,7 @@ class Server(QtWidgets.QWidget):
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)
-	server = Server("127.0.0.1", 80)
+	server = Server("127.0.0.1", 2718)
 	# the server and the gui run on different threads
 	server_thread = threading.Thread(target=server.run, args=())
 	server_thread.start()

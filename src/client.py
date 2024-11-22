@@ -17,12 +17,10 @@ class Client(QtWidgets.QWidget):
 	"""
 	def __init__(self):
 		super().__init__()
-		self.ipandport, self.nickname = ClientPopup().exec()
-		self.host = self.ipandport.split(":")[0]
-		self.port = int(self.ipandport.split(":")[1])
+		self.server_ip, self.nickname = ClientPopup().exec()
+		self.port = 2718
 		self.messages = []
-		self.port = int(self.port)
-		self.client = connect_to_server(self.host, self.port)
+		self.client = connect_to_server(self.server_ip, 2718)
 		# send out nickname to server with a setnickname message
 		self.client.send(b'\x02' + bytes(self.nickname, encoding="utf-8"))
 		self.shutdown_event = threading.Event()
@@ -47,7 +45,7 @@ class Client(QtWidgets.QWidget):
 		self.connected_to_label.setGeometry(QtCore.QRect(20, 0, 650, 71))
 		font.setPointSize(30)
 		self.connected_to_label.setFont(font)
-		self.connected_to_label.setText(f"Connected to: {self.host}:{self.port}")
+		self.connected_to_label.setText(f"Connected to: {self.server_ip}")
 
 		self.chat_list = QtWidgets.QListWidget(parent=self)
 		self.chat_list.setGeometry(QtCore.QRect(20, 70, 761, 471))
@@ -85,10 +83,16 @@ class Client(QtWidgets.QWidget):
 				self.chat_list.addItem(f"{self.nickname}: {msg}")
 				self.client.send(msg.encode(encoding="utf-8"))
 			case self.exit_button:
-				self.shutdown_event.set()
-				self.broadcast_thread.join()
-				self.client.close()
-				QtWidgets.QApplication.instance().quit()
+				self.close()
+
+	def close(self):
+		"""
+		graceful closing of the client
+		"""
+		self.shutdown_event.set()
+		self.broadcast_thread.join()
+		self.client.close()
+		QtWidgets.QApplication.instance().quit()
 
 	def handle_broadcast(self):
 		"""
@@ -96,12 +100,20 @@ class Client(QtWidgets.QWidget):
 		"""
 		while not self.shutdown_event.is_set():
 			try:
-				msg = self.client.recv(1024).split(b'\x01')
-				cl_addr = str(msg[0])[2:-1]
-				decoded = msg[1].decode("utf-8")
+				msg = self.client.recv(1024)
 				if msg:
-					self.messages.append((cl_addr, decoded))
-					self.chat_list.addItem(f"{cl_addr} : {decoded}")
+					print(msg[0])
+					# if we received a shutdown message, server is dying and we need to leave
+					if msg[0] == 3:
+						self.close()
+						break
+					else:
+						msg = msg.split(b'\x01')
+						cl_addr = str(msg[0])[2:-1]
+						decoded = msg[1].decode("utf-8")
+						self.messages.append((cl_addr, decoded))
+						self.chat_list.addItem(f"{cl_addr} : {decoded}")
+						self.chat_list.scrollToBottom()
 				else:
 					break
 			except TimeoutError:
