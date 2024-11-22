@@ -27,8 +27,10 @@ class Server(QtWidgets.QWidget):
 		self.messages = []
 		self.clients = []
 		self.threads = []
-		self.clients_lock = threading.Lock()  # for thread-safe access to the clients list
-		self.shutdown_event = threading.Event()  # to know when we're shutting everything down
+		# for thread-safe access to the clients list
+		self.clients_lock = threading.Lock()
+		# to know when we're shutting everything down
+		self.shutdown_event = threading.Event()
 
 		# controlling the uptime timer
 		self.time_thread = threading.Thread(target=self.update_timer)
@@ -46,16 +48,18 @@ class Server(QtWidgets.QWidget):
 			try:
 				(cl_sock, cl_addr) = self.sock.accept()
 				log_ok(f"accepted connection from {cl_addr}")
-				new_thread = threading.Thread(target=self.handle_client, args=(cl_sock, cl_addr))
+				new_thread = threading.Thread(
+					target=self.handle_client, args=(cl_sock, cl_addr)
+				)
 				self.clients_list.addItem(f"{cl_addr}")
 				self.clients.append((cl_sock, cl_addr))
 				self.threads.append(new_thread)
 				new_thread.start()
 				self.clients_count.setText(str(len(self.clients)))
 			except BlockingIOError:
-				# because we have a non-blocking socket every time we don't get a connection through accept()
+				# every time we don't get a connection
 				# it throws an error which we can just ignore here
-				sleep(0.5) # manual timeout so we don't get 90% cpu usage kekw
+				sleep(0.5)  # manual timeout so we don't get 90% cpu usage kekw
 
 	def close(self) -> None:
 		"""
@@ -77,7 +81,7 @@ class Server(QtWidgets.QWidget):
 			cl_addr - client address
 		"""
 		cl.setblocking(False)
-		nickname = "anonymous" # default for if we don't get a nickname
+		nickname = "anonymous"  # default for if we don't get a nickname
 		# make sure clients list has nickname
 		with self.clients_lock:
 			self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
@@ -104,7 +108,7 @@ class Server(QtWidgets.QWidget):
 					break
 			except BlockingIOError:
 				# we didn't get any data
-				sleep(0.5) # manual timeout so we don't get 90% cpu usage kekw
+				sleep(0.5)  # manual timeout so we don't get 90% cpu usage kekw
 			except ConnectionError:
 				# client exited while the server was recv()ing, which resulted in an error
 				# might come up later so i'll keep this here
@@ -122,7 +126,13 @@ class Server(QtWidgets.QWidget):
 		log_info(f"closing connection with client {cl_addr}")
 		cl.close()
 
-	def broadcast(self, msg: bytes, sender: socket.socket, sender_addr, nickname) -> None:
+	def broadcast(
+		self,
+		msg: bytes,
+		sender: socket.socket,
+		sender_addr,
+		nickname: str
+	) -> None:
 		"""
 		broadcasts received message to all connected clients
 		params:
@@ -152,6 +162,7 @@ class Server(QtWidgets.QWidget):
 		"""
 		initializes server ui
 		"""
+		aligns = QtCore.Qt.AlignmentFlag
 		self.setFixedSize(800, 600)
 		self.uptime_label = QtWidgets.QLabel(parent=self)
 		self.uptime_label.setGeometry(QtCore.QRect(540, 10, 251, 41))
@@ -166,9 +177,8 @@ class Server(QtWidgets.QWidget):
 		self.uptime_clock.setGeometry(QtCore.QRect(600, 60, 181, 31))
 		font.setPointSize(24)
 		self.uptime_clock.setFont(font)
-		self.uptime_clock.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | \
-			QtCore.Qt.AlignmentFlag.AlignTrailing \
-			| QtCore.Qt.AlignmentFlag.AlignVCenter)
+		self.uptime_clock.setAlignment(
+			aligns.AlignRight | aligns.AlignTrailing | aligns.AlignVCenter)
 		self.uptime_clock.setText("00:00:00")
 
 		self.clients_label = QtWidgets.QLabel(parent=self)
@@ -182,9 +192,8 @@ class Server(QtWidgets.QWidget):
 		self.clients_count.setGeometry(QtCore.QRect(600, 140, 181, 31))
 		font.setPointSize(24)
 		self.clients_count.setFont(font)
-		self.clients_count.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight| \
-			QtCore.Qt.AlignmentFlag.AlignTrailing \
-			| QtCore.Qt.AlignmentFlag.AlignVCenter)
+		self.clients_count.setAlignment(
+			aligns.AlignRight | aligns.AlignTrailing | aligns.AlignVCenter)
 		self.clients_count.setText("0")
 
 		self.close_button = QtWidgets.QPushButton(parent=self)
@@ -236,6 +245,7 @@ class Server(QtWidgets.QWidget):
 			minutes = (self.seconds_elapsed // 60) % 60
 			hours = self.seconds_elapsed // (60 * 24)
 			self.uptime_clock.setText(f"{hours:02}:{minutes:02}:{seconds:02}")
+
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)

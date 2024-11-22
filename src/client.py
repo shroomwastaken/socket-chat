@@ -51,7 +51,7 @@ class Client(QtWidgets.QWidget):
 		self.chat_list.setGeometry(QtCore.QRect(20, 70, 761, 471))
 
 		self.msg_input = QtWidgets.QLineEdit(parent=self)
-		self.msg_input.setGeometry(QtCore.QRect(20, 550, 611, 32))
+		self.msg_input.setGeometry(QtCore.QRect(20, 550, 511, 32))
 		font.setPointSize(14)
 		self.msg_input.setFont(font)
 		self.msg_input.setMaxLength(256)
@@ -62,6 +62,13 @@ class Client(QtWidgets.QWidget):
 		self.send_button.setFont(font)
 		self.send_button.setText("SEND")
 		self.send_button.clicked.connect(self.on_clicked)
+
+		self.send_txt_button = QtWidgets.QPushButton(parent=self)
+		self.send_txt_button.setGeometry(QtCore.QRect(535, 550, 101, 34))
+		font.setPointSize(16)
+		self.send_txt_button.setFont(font)
+		self.send_txt_button.setText("SENDTXT")
+		self.send_txt_button.clicked.connect(self.on_clicked)
 
 		self.exit_button = QtWidgets.QPushButton(parent=self)
 		self.exit_button.setGeometry(QtCore.QRect(650, 0, 131, 71))
@@ -82,6 +89,9 @@ class Client(QtWidgets.QWidget):
 				self.msg_input.clear()
 				self.chat_list.addItem(f"{self.nickname}: {msg}")
 				self.client.send(msg.encode(encoding="utf-8"))
+			case self.send_txt_button:
+				dialog = QtWidgets.QFileDialog(parent=self)
+				dialog.setFileMode(QtWidgets.QFileDialog.FileMode.ExistingFile)
 			case self.exit_button:
 				self.close()
 
@@ -124,6 +134,7 @@ class Client(QtWidgets.QWidget):
 				log_err("got bad message from server")
 				break
 
+
 def connect_to_server(host: str, port: int) -> socket.socket:
 	"""
 	connects non-blocking client socket to server
@@ -151,6 +162,7 @@ def connect_to_server(host: str, port: int) -> socket.socket:
 		# and select() hangs until we get a good socket
 		log_err(f"unable to connect to {host}:{port}")
 		return None
+
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)

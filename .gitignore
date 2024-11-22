@@ -1,3 +1,4 @@
 .pylintrc
+.flake8
 src/__pycache__
 ui/

@@ -59,6 +59,7 @@ class ClientPopup(QtWidgets.QDialog):
 	def on_clicked(self):
 		self.close()
 
+
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)
 	popup = ClientPopup()
