@@ -96,13 +96,12 @@ class Server(QtWidgets.QWidget):
 			self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
 			self.clients_list.addItem(f"{cl_addr} : {nickname}")
 		# send at most the last 50 messages to client as history
-		history = conn.execute("""SELECT * FROM msgs ORDER BY id DESC LIMIT 50;""").fetchall()[::-1]
+		history = conn.execute(
+			"""SELECT * FROM msgs ORDER BY id DESC LIMIT 50;""").fetchall()[::-1]
 		for item in history:
-			cl.send(
-				bytes(f"{item[1]}", encoding="utf-8") +
-				b'\x01' +
-				bytes(f"{str(b64decode(item[2]))[2:-1]}", encoding="utf-8")
-			)
+			part1 = bytes(f"{item[1]}", encoding="utf-8")
+			part2 = bytes(f"{str(b64decode(item[2]))[2:-1]}", encoding="utf-8")
+			cl.send(part1 + b'\x01' + part2)
 			# small delay for the client receiver to not count all of these sends as one
 			sleep(0.005)
 		while not self.shutdown_event.is_set():

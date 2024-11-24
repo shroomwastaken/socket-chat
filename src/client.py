@@ -165,6 +165,7 @@ class Client(QtWidgets.QWidget):
 				break
 		self.close()
 
+
 def connect_to_server(host: str, port: int) -> socket.socket:
 	"""
 	connects non-blocking client socket to server
