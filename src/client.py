@@ -5,7 +5,7 @@ main client module
 import socket
 import select
 import threading
-from sys import argv
+from sys import argv, exit
 import string
 from PyQt6 import QtCore, QtWidgets, QtGui
 from client_popup import ClientPopup
