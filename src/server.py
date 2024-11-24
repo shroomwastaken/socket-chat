@@ -5,9 +5,11 @@ main server module
 import socket
 import threading
 from time import sleep
+from base64 import b64encode, b64decode
 from sys import argv
 from PyQt6 import QtCore, QtWidgets, QtGui
 from log import log_ok, log_err, log_info
+import sqlite3
 
 
 class Server(QtWidgets.QWidget):
@@ -36,6 +38,16 @@ class Server(QtWidgets.QWidget):
 		self.time_thread = threading.Thread(target=self.update_timer)
 		self.time_thread.start()
 		self.seconds_elapsed = 0
+
+		# make sure table exists in db
+		self._db = sqlite3.connect("msgs.db")
+		self._db.execute(
+			"""CREATE TABLE IF NOT EXISTS msgs(
+				id INTEGER PRIMARY KEY,
+				name TEXT,
+				msg TEXT
+			)""")
+		self._db.close()
 
 		self.init_ui()
 
@@ -81,11 +93,22 @@ class Server(QtWidgets.QWidget):
 			cl_addr - client address
 		"""
 		cl.setblocking(False)
+		conn = sqlite3.connect("msgs.db")
 		nickname = "anonymous"  # default for if we don't get a nickname
 		# make sure clients list has nickname
 		with self.clients_lock:
 			self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
 			self.clients_list.addItem(f"{cl_addr} : {nickname}")
+		# send at most the last 50 messages to client as history
+		history = conn.execute("""SELECT * FROM msgs ORDER BY id DESC LIMIT 50;""").fetchall()[::-1]
+		for item in history:
+			cl.send(
+				bytes(f"{item[1]}", encoding="utf-8") +
+				b'\x01' +
+				bytes(f"{str(b64decode(item[2]))[2:-1]}", encoding="utf-8")
+			)
+			# small delay for the client receiver to not count all of these sends as one
+			sleep(0.005)
 		while not self.shutdown_event.is_set():
 			try:
 				msg = cl.recv(1024)
@@ -103,6 +126,11 @@ class Server(QtWidgets.QWidget):
 						self.messages.append((cl_addr, decoded))
 						self.chat_list.addItem(f"{nickname} : {decoded}")
 						self.chat_list.scrollToBottom()
+						conn.execute(
+							f"""INSERT INTO msgs (name, msg)
+								VALUES ('{nickname}', '{str(b64encode(msg))[2:-1]}')"""
+						)
+						conn.commit()
 						self.broadcast(msg, cl, cl_addr, nickname)
 				else:
 					break
@@ -123,6 +151,7 @@ class Server(QtWidgets.QWidget):
 			self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
 			self.clients.remove((cl, cl_addr))
 			self.clients_count.setText(str(len(self.clients)))
+			conn.close()
 		log_info(f"closing connection with client {cl_addr}")
 		cl.close()
 

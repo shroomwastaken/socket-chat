@@ -142,17 +142,16 @@ class Client(QtWidgets.QWidget):
 			try:
 				msg = self.client.recv(1024)
 				if msg:
-					print(msg[0])
 					# if we received a shutdown message, server is dying and we need to leave
 					if msg[0] == 3:
 						self.close()
 						break
 					else:
 						msg = msg.split(b'\x01')
-						cl_addr = str(msg[0])[2:-1]
+						nickname = str(msg[0])[2:-1]
 						decoded = msg[1].decode("utf-8")
-						self.messages.append((cl_addr, decoded))
-						self.chat_list.addItem(f"{cl_addr} : {decoded}")
+						self.messages.append((nickname, decoded))
+						self.chat_list.addItem(f"{nickname} : {decoded}")
 						self.chat_list.scrollToBottom()
 				else:
 					break
