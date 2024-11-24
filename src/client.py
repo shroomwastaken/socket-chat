@@ -27,14 +27,19 @@ class Client(QtWidgets.QWidget):
 		self.server_ip, self.nickname = ClientPopup().exec()
 		self.port = 2718
 		self.client = connect_to_server(self.server_ip, 2718)
+		# if we couldn't connect to server
+		if not self.client:
+			QtWidgets.QMessageBox.critical(
+				self,
+				"Unable to connect",
+				"Unable to connect to server at this ip",
+				QtWidgets.QMessageBox.StandardButton.Ok)
+			exit()
 		# send out nickname to server with a setnickname message
 		self.client.send(b'\x02' + bytes(self.nickname, encoding="utf-8"))
 		self.shutdown_event = threading.Event()
 		self.broadcast_thread = threading.Thread(target=self.handle_broadcast)
 		self.broadcast_thread.start()
-		# if we couldn't connect to server
-		if not self.client:
-			exit()
 		self.init_ui()
 
 	def init_ui(self):

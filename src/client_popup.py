@@ -1,3 +1,4 @@
+from ipaddress import ip_address
 from sys import argv
 from PyQt6 import QtCore, QtWidgets, QtGui
 
@@ -57,6 +58,16 @@ class ClientPopup(QtWidgets.QDialog):
 		return self.ip_input.text(), self.name_input.text()
 
 	def on_clicked(self):
+		try:
+			# bad input check
+			ip_address(self.ip_input.text())
+		except ValueError:
+			QtWidgets.QMessageBox.critical(
+				self,
+				"Bad ip address",
+				"Please enter a valid ip address",
+				QtWidgets.QMessageBox.StandardButton.Ok)
+			return
 		self.close()
 
 
