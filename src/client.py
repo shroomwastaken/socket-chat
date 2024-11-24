@@ -5,6 +5,7 @@ main client module
 import socket
 import select
 import threading
+from ipaddress import ip_address
 from sys import argv, exit
 import string
 from PyQt6 import QtCore, QtWidgets, QtGui
@@ -24,6 +25,16 @@ class Client(QtWidgets.QWidget):
 	def __init__(self):
 		super().__init__()
 		self.server_ip, self.nickname = ClientPopup().exec()
+		try:
+			# if user closed popup manually, we need to check for that
+			ip_address(self.server_ip)
+		except ValueError:
+			QtWidgets.QMessageBox.critical(
+				self,
+				"Bad ip address",
+				"Recieved bad ip address, closing",
+				QtWidgets.QMessageBox.StandardButton.Ok)
+			exit()
 		self.port = 2718
 		self.client = connect_to_server(self.server_ip, 2718)
 		# if we couldn't connect to server
