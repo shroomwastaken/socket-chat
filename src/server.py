@@ -8,7 +8,6 @@ from time import sleep
 from base64 import b64encode, b64decode
 from sys import argv
 from PyQt6 import QtCore, QtWidgets, QtGui
-from log import log_ok, log_err, log_info
 import sqlite3
 
 
@@ -58,7 +57,6 @@ class Server(QtWidgets.QWidget):
 			# there should be no reason this ever fails :)
 			try:
 				(cl_sock, cl_addr) = self.sock.accept()
-				log_ok(f"accepted connection from {cl_addr}")
 				new_thread = threading.Thread(
 					target=self.handle_client, args=(cl_sock, cl_addr)
 				)
@@ -82,7 +80,6 @@ class Server(QtWidgets.QWidget):
 		for t in self.threads:
 			t.join()
 		self.time_thread.join()
-		log_info("closed server")
 
 	def handle_client(self, cl: socket.socket, cl_addr) -> None:
 		""".
@@ -138,11 +135,9 @@ class Server(QtWidgets.QWidget):
 			except ConnectionError:
 				# client exited while the server was recv()ing, which resulted in an error
 				# might come up later so i'll keep this here
-				# log_err(f"connection refused by peer error from client {cl_addr}")
 				break
 			except UnicodeDecodeError:
 				# got bad bytes from client
-				log_err(f"got bad message from client {cl_addr}")
 				break
 
 		with self.clients_lock:
@@ -150,7 +145,6 @@ class Server(QtWidgets.QWidget):
 			self.clients.remove((cl, cl_addr))
 			self.clients_count.setText(str(len(self.clients)))
 			conn.close()
-		log_info(f"closing connection with client {cl_addr}")
 		cl.close()
 
 	def broadcast(

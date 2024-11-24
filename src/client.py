@@ -8,7 +8,6 @@ import threading
 from sys import argv
 import string
 from PyQt6 import QtCore, QtWidgets, QtGui
-from log import log_ok, log_err
 from client_popup import ClientPopup
 
 
@@ -163,9 +162,8 @@ class Client(QtWidgets.QWidget):
 				pass
 			except UnicodeDecodeError:
 				# got bad bytes from server
-				log_err("got bad message from server")
 				break
-
+		self.close()
 
 def connect_to_server(host: str, port: int) -> socket.socket:
 	"""
@@ -187,12 +185,10 @@ def connect_to_server(host: str, port: int) -> socket.socket:
 	_, ready_to_write, _ = select.select([], [client], [])
 
 	if ready_to_write:
-		log_ok(f"successfully connected to {host}:{port}")
 		return client
 	else:
 		# should never happen as we handled not connecting to the server
 		# and select() hangs until we get a good socket
-		log_err(f"unable to connect to {host}:{port}")
 		return None
 
 
