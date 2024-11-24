@@ -26,7 +26,6 @@ class Client(QtWidgets.QWidget):
 		super().__init__()
 		self.server_ip, self.nickname = ClientPopup().exec()
 		self.port = 2718
-		self.messages = []
 		self.client = connect_to_server(self.server_ip, 2718)
 		# send out nickname to server with a setnickname message
 		self.client.send(b'\x02' + bytes(self.nickname, encoding="utf-8"))
@@ -150,7 +149,6 @@ class Client(QtWidgets.QWidget):
 						msg = msg.split(b'\x01')
 						nickname = str(msg[0])[2:-1]
 						decoded = msg[1].decode("utf-8")
-						self.messages.append((nickname, decoded))
 						self.chat_list.addItem(f"{nickname} : {decoded}")
 						self.chat_list.scrollToBottom()
 				else:

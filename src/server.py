@@ -26,7 +26,6 @@ class Server(QtWidgets.QWidget):
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.setblocking(False)  # non-blocking recv calls
 
-		self.messages = []
 		self.clients = []
 		self.threads = []
 		# for thread-safe access to the clients list
@@ -123,7 +122,6 @@ class Server(QtWidgets.QWidget):
 							self.clients_list.addItem(f"{cl_addr} : {nickname}")
 					else:
 						decoded = msg.decode("utf-8")
-						self.messages.append((cl_addr, decoded))
 						self.chat_list.addItem(f"{nickname} : {decoded}")
 						self.chat_list.scrollToBottom()
 						conn.execute(
