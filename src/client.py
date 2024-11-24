@@ -164,7 +164,7 @@ class Client(QtWidgets.QWidget):
 						msg = msg.split(b'\x01')
 						nickname = str(msg[0])[2:-1]
 						decoded = msg[1].decode("utf-8")
-						self.chat_list.addItem(f"{nickname} : {decoded}")
+						self.chat_list.addItem(f"{nickname}: {decoded}")
 						self.chat_list.scrollToBottom()
 				else:
 					break
@@ -174,7 +174,6 @@ class Client(QtWidgets.QWidget):
 			except UnicodeDecodeError:
 				# got bad bytes from server
 				break
-		self.close()
 
 
 def connect_to_server(host: str, port: int) -> socket.socket:
@@ -190,7 +189,6 @@ def connect_to_server(host: str, port: int) -> socket.socket:
 	try:
 		client.connect((host, port))
 	except TimeoutError:
-		print(f"unable to connect to {host}:{port}")
 		return None
 
 	# wait until we're ready to send to server
@@ -208,4 +206,5 @@ if __name__ == "__main__":
 	app = QtWidgets.QApplication(argv)
 	w = Client()
 	w.show()
-	exit(app.exec())
+	app.exec()
+	w.close()

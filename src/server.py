@@ -115,10 +115,10 @@ class Server(QtWidgets.QWidget):
 						nickname = msg[1:].decode("utf-8")
 						with self.clients_lock:
 							self.clients_list.takeItem(self.clients.index((cl, cl_addr)))
-							self.clients_list.addItem(f"{cl_addr} : {nickname}")
+							self.clients_list.addItem(f"{cl_addr}: {nickname}")
 					else:
 						decoded = msg.decode("utf-8")
-						self.chat_list.addItem(f"{nickname} : {decoded}")
+						self.chat_list.addItem(f"{nickname}: {decoded}")
 						self.chat_list.scrollToBottom()
 						conn.execute(
 							f"""INSERT INTO msgs (name, msg)
