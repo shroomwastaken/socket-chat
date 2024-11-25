@@ -15,7 +15,8 @@ from client_popup import ClientPopup
 ALLOWED_CHARACTERS = string.punctuation + \
 	string.ascii_letters + \
 	"абвгдеёжзийклмнопрстуфхцчшщъыьэюя" + \
-	"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+	"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ" + \
+	"0123456789"
 
 
 class Client(QtWidgets.QWidget):
@@ -106,6 +107,9 @@ class Client(QtWidgets.QWidget):
 				if self.msg_input.text() == "":
 					return
 
+				if any(x not in ALLOWED_CHARACTERS for x in self.msg_input.text()):
+					return
+
 				msg = self.msg_input.text()
 				self.msg_input.clear()
 				self.chat_list.addItem(f"{self.nickname}: {msg}")
@@ -118,10 +122,11 @@ class Client(QtWidgets.QWidget):
 					filename = dialog.selectedFiles()[0]
 					try:
 						with open(filename, "r") as f:
-							content = f.read()
+							content = f.read().strip()
 							if len(content) > 256:
 								content = content[:256]
 							if any(x not in ALLOWED_CHARACTERS for x in content):
+								print([x for x in content if x not in ALLOWED_CHARACTERS])
 								raise ValueError
 						self.msg_input.setText(content)
 					except PermissionError:
