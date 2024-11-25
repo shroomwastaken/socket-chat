@@ -15,7 +15,8 @@ from client_popup import ClientPopup
 ALLOWED_CHARACTERS = string.punctuation + \
 	string.ascii_letters + \
 	"абвгдеёжзийклмнопрстуфхцчшщъыьэюя" + \
-	"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+	"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ" + \
+	"0123456789"
 
 
 class Client(QtWidgets.QWidget):
@@ -104,6 +105,9 @@ class Client(QtWidgets.QWidget):
 		match self.sender():
 			case self.send_button:
 				if self.msg_input.text() == "":
+					return
+
+				if any(x not in ALLOWED_CHARACTERS for x in self.msg_input.text()):
 					return
 
 				msg = self.msg_input.text()
